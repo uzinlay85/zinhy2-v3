@@ -59,7 +59,7 @@ if [ -d "/etc/hysteria" ] && [ -f "/etc/hysteria/config.yaml" ]; then
     echo ""
     echo "5) Show current link"
     echo ""
-    read -r -p "Enter your choice: " choice
+    read -r -p "Enter your choice: " choice </dev/tty
     case $choice in
         1)
             # Reinstall
@@ -81,28 +81,28 @@ if [ -d "/etc/hysteria" ] && [ -f "/etc/hysteria/config.yaml" ]; then
             current_obfs_password=$(awk '/^obfs:/{f=1; next} f && /^[^ ]/{f=0} f && /password:/{print $2; exit}' /etc/hysteria/config.yaml)
             
             echo ""
-            read -r -p "Enter a new port (or press enter to keep the current one [$current_port]): " new_port
+            read -r -p "Enter a new port (or press enter to keep the current one [$current_port]): " new_port </dev/tty
             [ -z "$new_port" ] && new_port=$current_port
             echo ""
-            read -r -p "Enter a new password (or press enter to keep the current one [$current_password]): " new_password
+            read -r -p "Enter a new password (or press enter to keep the current one [$current_password]): " new_password </dev/tty
             [ -z "$new_password" ] && new_password=$current_password
             echo ""
 
             # Obfs modification
             if [ -n "$current_obfs_password" ]; then
                 echo "Obfuscation (Salamander) is currently ENABLED (password: $current_obfs_password)"
-                read -r -p "Keep obfs enabled? (y/n, default: y): " keep_obfs
+                read -r -p "Keep obfs enabled? (y/n, default: y): " keep_obfs </dev/tty
                 if [ "$keep_obfs" = "n" ] || [ "$keep_obfs" = "N" ]; then
                     new_obfs_password=""
                 else
-                    read -r -p "Enter a new obfs password (or press enter to keep the current one): " new_obfs_password
+                    read -r -p "Enter a new obfs password (or press enter to keep the current one): " new_obfs_password </dev/tty
                     [ -z "$new_obfs_password" ] && new_obfs_password=$current_obfs_password
                 fi
             else
                 echo "Obfuscation (Salamander) is currently DISABLED"
-                read -r -p "Enable obfs? (y/n, default: n): " enable_obfs
+                read -r -p "Enable obfs? (y/n, default: n): " enable_obfs </dev/tty
                 if [ "$enable_obfs" = "y" ] || [ "$enable_obfs" = "Y" ]; then
-                    read -r -p "Enter an obfs password (or press enter for a random one): " new_obfs_password
+                    read -r -p "Enter an obfs password (or press enter for a random one): " new_obfs_password </dev/tty
                     [ -z "$new_obfs_password" ] && new_obfs_password=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 16 | head -n 1)
                 else
                     new_obfs_password=""
@@ -123,7 +123,7 @@ if [ -d "/etc/hysteria" ] && [ -f "/etc/hysteria/config.yaml" ]; then
             echo "1) Default (Dual-stack auto)"
             echo "2) Prefer IPv4 (Recommended for VPS with broken/slow IPv6)"
             echo "3) Force IPv4 only"
-            read -r -p "Enter choice [1-3, default: $current_routing]: " route_choice
+            read -r -p "Enter choice [1-3, default: $current_routing]: " route_choice </dev/tty
             [ -z "$route_choice" ] && route_choice=$current_routing
 
             resolver_yaml=""
@@ -313,7 +313,7 @@ echo ""
 echo "Hysteria requires a valid SSL certificate."
 echo "Ensure your domain's DNS A record points to this server's IP address."
 echo "Also ensure Port 80 is open to obtain the Let's Encrypt certificate if you don't already have one."
-read -r -p "Enter your domain name (e.g., vpn.example.com): " domain
+read -r -p "Enter your domain name (e.g., vpn.example.com): " domain </dev/tty
 if [ -z "$domain" ]; then
     echo "Domain is required. Exiting."
     exit 1
@@ -391,7 +391,7 @@ if [ -n "$cert_path" ] && [ -n "$key_path" ]; then
     echo "Found existing certificate for $domain at $cert_path"
 else
     echo "No existing certificate found. Proceeding to generate one..."
-    read -r -p "Enter your email address for Let's Encrypt renewal notices (optional, press enter to skip): " email
+    read -r -p "Enter your email address for Let's Encrypt renewal notices (optional, press enter to skip): " email </dev/tty
     if [ -z "$email" ]; then
         certbot_email_args=("--register-unsafely-without-email")
     else
@@ -413,19 +413,19 @@ fi
 
 # Step 3: Prompt user for input
 echo ""
-read -r -p "Enter a port (or press enter for a random port): " port
+read -r -p "Enter a port (or press enter for a random port): " port </dev/tty
 [ -z "$port" ] && port=$((RANDOM + 10000))
 
 echo ""
-read -r -p "Enter a password (or press enter for a random password): " password
+read -r -p "Enter a password (or press enter for a random password): " password </dev/tty
 [ -z "$password" ] && password=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 16 | head -n 1)
 
 # Step 3.5: Obfuscation (Salamander)
 echo ""
-read -r -p "Enable Salamander obfuscation? (y/n, default: n): " enable_obfs
+read -r -p "Enable Salamander obfuscation? (y/n, default: n): " enable_obfs </dev/tty
 obfs_password=""
 if [ "$enable_obfs" = "y" ] || [ "$enable_obfs" = "Y" ]; then
-    read -r -p "Enter an obfs password (or press enter for a random one): " obfs_password
+    read -r -p "Enter an obfs password (or press enter for a random one): " obfs_password </dev/tty
     [ -z "$obfs_password" ] && obfs_password=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 16 | head -n 1)
 fi
 
@@ -435,7 +435,7 @@ echo "Select outbound routing mode:"
 echo "1) Default (Dual-stack auto)"
 echo "2) Prefer IPv4 (Recommended for VPS with broken/slow IPv6) [Default]"
 echo "3) Force IPv4 only"
-read -r -p "Enter choice [1-3, default: 2]: " route_choice
+read -r -p "Enter choice [1-3, default: 2]: " route_choice </dev/tty
 [ -z "$route_choice" ] && route_choice="2"
 
 resolver_yaml=""
