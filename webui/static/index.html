@@ -47,6 +47,10 @@
             <div class="stat-icon purple"><i data-lucide="users" class="lucide-icon icon-22"></i></div>
             <div><div class="stat-label">Total Active Users</div><div class="stat-value" id="userCount">-</div></div>
         </div>
+        <div class="stat-card">
+            <div class="stat-icon orange"><i data-lucide="cpu" class="lucide-icon icon-22"></i></div>
+            <div><div class="stat-label">RAM Usage</div><div class="stat-value" id="ramUsage">-</div></div>
+        </div>
     </div>
 
     <div class="config-section" id="configSection" style="display: none;">
@@ -69,6 +73,14 @@
                     <span class="label">Obfuscation (Salamander):</span>
                     <span class="value" id="confObfs">-</span>
                 </div>
+                <div class="config-row">
+                    <span class="label">Disk Usage:</span>
+                    <span class="value" id="diskUsage">-</span>
+                </div>
+                <div class="config-row">
+                    <span class="label">Server Uptime:</span>
+                    <span class="value" id="serverUptime">-</span>
+                </div>
             </div>
         </div>
 
@@ -82,6 +94,21 @@
                 <div id="usersGrid" class="users-grid">
                     <!-- User cards will be dynamically rendered here -->
                 </div>
+            </div>
+        </div>
+
+        <!-- System Logs & Diagnostics Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2><i data-lucide="terminal" class="lucide-icon icon-20"></i> System Logs & Diagnostics</h2>
+                <div class="log-tab-actions">
+                    <button id="tabHysteriaLogs" class="btn btn-primary btn-sm" onclick="switchLogTab('hysteria')">Hysteria 2 Core Logs</button>
+                    <button id="tabWebuiLogs" class="btn btn-ghost btn-sm" onclick="switchLogTab('webui')">Web UI Logs</button>
+                    <button class="btn btn-ghost btn-icon btn-sm" onclick="refreshCurrentLogs()" title="Refresh Logs"><i data-lucide="rotate-cw" class="lucide-icon icon-14"></i></button>
+                </div>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <pre id="logsContainer" class="logs-container">Loading logs...</pre>
             </div>
         </div>
     </div>

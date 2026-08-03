@@ -107,6 +107,78 @@ def get_config():
         "users": users
     }
 
+@app.get("/api/logs/{service}")
+def get_service_logs(service: str, lines: int = 50):
+    if service not in ["hysteria", "webui"]:
+        raise HTTPException(status_code=400, detail="Invalid service. Must be 'hysteria' or 'webui'")
+    
+    unit_name = "hysteria-server" if service == "hysteria" else "hysteria-webui"
+    
+    if os.name != 'nt':
+        try:
+            res = subprocess.run(
+                ["journalctl", "-u", unit_name, "-n", str(lines), "--no-pager"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            logs = res.stdout if res.stdout else "No logs found or service has no output yet."
+            return {"service": service, "logs": logs}
+        except Exception as e:
+            return {"service": service, "logs": f"Error fetching logs: {str(e)}"}
+    else:
+        return {"service": service, "logs": f"[Windows Simulation Environment]\nSample log stream for {unit_name}.\nService active and running normally."}
+
+@app.get("/api/system/resources")
+def get_system_resources():
+    if os.name != 'nt':
+        try:
+            # Memory
+            free_res = subprocess.run(["free", "-m"], capture_output=True, text=True)
+            mem_used_mb, mem_total_mb = 0, 1
+            for line in free_res.stdout.splitlines():
+                if line.startswith("Mem:"):
+                    parts = line.split()
+                    mem_total_mb = int(parts[1])
+                    mem_used_mb = int(parts[2])
+                    break
+            
+            # Disk
+            df_res = subprocess.run(["df", "-h", "/"], capture_output=True, text=True)
+            disk_used, disk_total, disk_percent = "0G", "0G", "0%"
+            lines = df_res.stdout.splitlines()
+            if len(lines) >= 2:
+                parts = lines[1].split()
+                disk_total = parts[1]
+                disk_used = parts[2]
+                disk_percent = parts[4]
+
+            # Uptime & Load
+            uptime_res = subprocess.run(["uptime"], capture_output=True, text=True)
+            uptime_str = uptime_res.stdout.strip()
+            
+            return {
+                "ram": {
+                    "used_mb": mem_used_mb,
+                    "total_mb": mem_total_mb,
+                    "percent": round((mem_used_mb / mem_total_mb) * 100, 1) if mem_total_mb > 0 else 0
+                },
+                "disk": {
+                    "used": disk_used,
+                    "total": disk_total,
+                    "percent": disk_percent
+                },
+                "uptime": uptime_str
+            }
+        except Exception as e:
+            return {"error": str(e)}
+    else:
+        return {
+            "ram": {"used_mb": 512, "total_mb": 2048, "percent": 25.0},
+            "disk": {"used": "4.5G", "total": "20G", "percent": "23%"},
+            "uptime": "Windows dev environment"
+        }
+
 @app.post("/api/users")
 def add_user(user: UserCreate):
     data = get_normalized_config()

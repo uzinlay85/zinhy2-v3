@@ -1,8 +1,18 @@
 let currentServerConfig = {};
 let userLinksMap = {};
+let activeLogTab = 'hysteria';
 
 document.addEventListener('DOMContentLoaded', () => {
     checkStatus();
+    fetchSystemResources();
+    fetchLogs(activeLogTab);
+    
+    // Auto-refresh resources every 15s
+    setInterval(() => {
+        if (document.getElementById('configSection').style.display !== 'none') {
+            fetchSystemResources();
+        }
+    }, 15000);
 });
 
 function showToast(msg) {
@@ -39,6 +49,62 @@ async function checkStatus() {
     } catch (e) {
         console.error("Failed to check status", e);
     }
+}
+
+async function fetchSystemResources() {
+    try {
+        const res = await fetch('/api/system/resources');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.ram) {
+            document.getElementById('ramUsage').innerText = `${data.ram.percent}% (${data.ram.used_mb}MB / ${data.ram.total_mb}MB)`;
+        }
+        if (data.disk) {
+            document.getElementById('diskUsage').innerText = `${data.disk.used} / ${data.disk.total} (${data.disk.percent})`;
+        }
+        if (data.uptime) {
+            document.getElementById('serverUptime').innerText = data.uptime;
+        }
+    } catch (e) {
+        console.error("Failed to fetch system resources", e);
+    }
+}
+
+async function fetchLogs(service) {
+    const container = document.getElementById('logsContainer');
+    if (!container) return;
+    
+    try {
+        const res = await fetch(`/api/logs/${service}?lines=60`);
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        const data = await res.json();
+        container.innerText = data.logs || "No logs available.";
+        container.scrollTop = container.scrollHeight; // Auto-scroll to bottom
+    } catch (e) {
+        container.innerText = "Error fetching logs: " + e.message;
+    }
+}
+
+function switchLogTab(service) {
+    activeLogTab = service;
+    const tabHysteria = document.getElementById('tabHysteriaLogs');
+    const tabWebui = document.getElementById('tabWebuiLogs');
+    
+    if (service === 'hysteria') {
+        tabHysteria.className = 'btn btn-primary btn-sm';
+        tabWebui.className = 'btn btn-ghost btn-sm';
+    } else {
+        tabHysteria.className = 'btn btn-ghost btn-sm';
+        tabWebui.className = 'btn btn-primary btn-sm';
+    }
+    
+    fetchLogs(service);
+}
+
+function refreshCurrentLogs() {
+    fetchLogs(activeLogTab);
+    showToast("Logs refreshed!");
 }
 
 async function loadConfig() {
