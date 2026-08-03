@@ -26,7 +26,7 @@ fi
 
 # Check for and install required packages
 install_required_packages() {
-    REQUIRED_PACKAGES=("curl" "certbot")
+    REQUIRED_PACKAGES=("curl" "certbot" "python3" "python3-pip" "python3-venv")
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
         if ! command -v "$pkg" &> /dev/null; then
             apt-get update > /dev/null 2>&1
@@ -64,8 +64,11 @@ if [ -d "/etc/hysteria" ] && [ -f "/etc/hysteria/config.yaml" ]; then
         1)
             # Reinstall
             systemctl stop hysteria-server
+            systemctl stop hysteria-webui > /dev/null 2>&1
             systemctl disable hysteria-server > /dev/null 2>&1
+            systemctl disable hysteria-webui > /dev/null 2>&1
             rm -rf /etc/hysteria
+            rm -rf /opt/hysteria-webui
             rm -rf /etc/systemd/system/hysteria-server.service.d
             systemctl daemon-reload
             ;;
@@ -228,14 +231,18 @@ http:
         4)
             # Uninstall
             systemctl stop hysteria-server
+            systemctl stop hysteria-webui > /dev/null 2>&1
             systemctl disable hysteria-server > /dev/null 2>&1
+            systemctl disable hysteria-webui > /dev/null 2>&1
             rm -rf /etc/hysteria
+            rm -rf /opt/hysteria-webui
             rm -f /usr/local/bin/hysteria
             rm -f /etc/systemd/system/hysteria-server.service
             rm -f /etc/systemd/system/hysteria-server@.service
+            rm -f /etc/systemd/system/hysteria-webui.service
             rm -rf /etc/systemd/system/hysteria-server.service.d
             systemctl daemon-reload
-            echo "Hysteria uninstalled successfully!"
+            echo "Hysteria and Web UI uninstalled successfully!"
             echo ""
             exit 0
             ;;
@@ -539,4 +546,55 @@ else
     nekobox_url="hysteria2://$password@$domain:$port/?insecure=0&sni=$domain#Hysteria2-$((RANDOM % 9000 + 1000))"
 fi
 echo "$nekobox_url"
+echo ""
+
+# Step 7: Setup Web UI
+echo "Setting up Web UI..."
+WEBUI_DIR="/opt/hysteria-webui"
+mkdir -p "$WEBUI_DIR"
+
+# Download Web UI files
+echo "Downloading Web UI files..."
+REPO_URL="https://raw.githubusercontent.com/uzinlay85/zinhy2-v3/main/webui"
+curl -sSL "$REPO_URL/backend.py" -o "$WEBUI_DIR/backend.py"
+curl -sSL "$REPO_URL/requirements.txt" -o "$WEBUI_DIR/requirements.txt"
+
+mkdir -p "$WEBUI_DIR/static/css"
+mkdir -p "$WEBUI_DIR/static/js"
+curl -sSL "$REPO_URL/static/index.html" -o "$WEBUI_DIR/static/index.html"
+curl -sSL "$REPO_URL/static/css/style.css" -o "$WEBUI_DIR/static/css/style.css"
+curl -sSL "$REPO_URL/static/js/app.js" -o "$WEBUI_DIR/static/js/app.js"
+
+# Setup Python Virtual Environment and Install Dependencies
+echo "Installing Python dependencies..."
+python3 -m venv "$WEBUI_DIR/venv"
+"$WEBUI_DIR/venv/bin/pip" install -r "$WEBUI_DIR/requirements.txt" > /dev/null 2>&1
+
+# Setup systemd service for Web UI
+echo "Configuring Web UI systemd service..."
+cat > /etc/systemd/system/hysteria-webui.service <<EOL
+[Unit]
+Description=Hysteria2 Web UI
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=$WEBUI_DIR
+ExecStart=$WEBUI_DIR/venv/bin/python3 backend.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+systemctl daemon-reload
+systemctl enable hysteria-webui > /dev/null 2>&1
+systemctl restart hysteria-webui
+
+server_ip=\$(curl -sSL ipv4.icanhazip.com || echo "your_server_ip")
+
+echo "======================================"
+echo "Web UI Installation Complete!"
+echo "You can access the Web UI at: http://\$server_ip:8000"
+echo "======================================"
 echo ""
