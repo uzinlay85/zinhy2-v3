@@ -197,12 +197,21 @@ async def traffic_poller():
     while True:
         try:
             if os.name != 'nt':
+                # Get first user for fallback if Hysteria reports "me"
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("SELECT username FROM users ORDER BY rowid ASC LIMIT 1")
+                row = c.fetchone()
+                first_username = row["username"] if row else "user1"
+                conn.close()
+
                 # 1. Fetch traffic stats and clear counter
                 traffic_data = await fetch_url_json(f"{TRAFFIC_API_URL}/traffic?clear=1")
                 if isinstance(traffic_data, dict) and traffic_data:
                     conn = get_db()
                     c = conn.cursor()
                     for u, stats in traffic_data.items():
+                        target_user = first_username if u == "me" else u
                         total_bytes = 0
                         if isinstance(stats, dict):
                             total_bytes = stats.get("tx", 0) + stats.get("rx", 0)
@@ -210,18 +219,20 @@ async def traffic_poller():
                             total_bytes = int(stats)
                             
                         if total_bytes > 0:
-                            c.execute("UPDATE users SET data_used_bytes = data_used_bytes + ? WHERE username = ?", (total_bytes, u))
+                            c.execute("UPDATE users SET data_used_bytes = data_used_bytes + ? WHERE username = ?", (total_bytes, target_user))
                     conn.commit()
                     conn.close()
 
                 # 2. Fetch online users & update last_seen
                 online_resp_data = await fetch_url_json(f"{TRAFFIC_API_URL}/online")
                 if online_resp_data is not None:
-                    current_online = set()
+                    raw_online = set()
                     if isinstance(online_resp_data, dict):
-                        current_online = set(online_resp_data.keys())
+                        raw_online = set(online_resp_data.keys())
                     elif isinstance(online_resp_data, list):
-                        current_online = set(online_resp_data)
+                        raw_online = set(online_resp_data)
+                    
+                    current_online = set(first_username if u == "me" else u for u in raw_online)
                     
                     now_ts = int(time.time())
                     if current_online:
