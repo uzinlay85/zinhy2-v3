@@ -180,33 +180,46 @@ online_users_set = set()
 
 async def traffic_poller():
     global online_users_set
+    no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    
     while True:
         try:
             if os.name != 'nt':
                 # 1. Fetch traffic stats and clear counter
                 try:
                     req = urllib.request.Request(f"{TRAFFIC_API_URL}/traffic?clear=1")
-                    with urllib.request.urlopen(req, timeout=3) as resp:
+                    with no_proxy_opener.open(req, timeout=3) as resp:
                         if resp.status == 200:
                             traffic_data = json.loads(resp.read().decode('utf-8'))
-                            if traffic_data:
+                            if isinstance(traffic_data, dict) and traffic_data:
                                 conn = get_db()
                                 c = conn.cursor()
                                 for u, stats in traffic_data.items():
-                                    total_bytes = stats.get("tx", 0) + stats.get("rx", 0)
+                                    total_bytes = 0
+                                    if isinstance(stats, dict):
+                                        total_bytes = stats.get("tx", 0) + stats.get("rx", 0)
+                                    elif isinstance(stats, (int, float)):
+                                        total_bytes = int(stats)
+                                        
                                     if total_bytes > 0:
                                         c.execute("UPDATE users SET data_used_bytes = data_used_bytes + ? WHERE username = ?", (total_bytes, u))
                                 conn.commit()
                                 conn.close()
-                except Exception:
+                except Exception as err:
                     pass
 
                 # 2. Fetch online users & update last_seen
                 try:
                     req = urllib.request.Request(f"{TRAFFIC_API_URL}/online")
-                    with urllib.request.urlopen(req, timeout=3) as resp:
+                    with no_proxy_opener.open(req, timeout=3) as resp:
                         if resp.status == 200:
-                            current_online = set(json.loads(resp.read().decode('utf-8')).keys())
+                            online_resp_data = json.loads(resp.read().decode('utf-8'))
+                            current_online = set()
+                            if isinstance(online_resp_data, dict):
+                                current_online = set(online_resp_data.keys())
+                            elif isinstance(online_resp_data, list):
+                                current_online = set(online_resp_data)
+                                
                             went_offline = online_users_set - current_online
                             now_ts = int(time.time())
                             if went_offline:
@@ -217,7 +230,7 @@ async def traffic_poller():
                                 conn.commit()
                                 conn.close()
                             online_users_set = current_online
-                except Exception:
+                except Exception as err:
                     pass
 
                 # 3. Check for exceeded limits & sync YAML if needed
@@ -226,7 +239,7 @@ async def traffic_poller():
         except Exception as e:
             print("Traffic poller error:", e)
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
 
 @app.on_event("startup")
 async def startup_event():
