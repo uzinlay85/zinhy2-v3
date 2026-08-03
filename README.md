@@ -19,7 +19,7 @@
 Server (Ubuntu/Debian) ကို ဝင်ပြီး အောက်ပါ command ကို အသုံးပြုကာ Installer ကို Run ပါ။ (Root permission လိုအပ်ပါတယ်)
 
 ```bash
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/uzinlay85/zinhy2-v3/main/hysteria2-installer.sh)
+curl -fsSL https://raw.githubusercontent.com/uzinlay85/zinhy2-v3/main/hysteria2-installer.sh | sudo bash
 ```
 
 **မှတ်ချက်:**
