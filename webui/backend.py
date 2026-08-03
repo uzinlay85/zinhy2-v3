@@ -88,9 +88,12 @@ def sync_db_to_yaml():
     if not data:
         return
         
+    config_changed = False
+    
     # Ensure trafficStats is configured
-    if "trafficStats" not in data:
+    if "trafficStats" not in data or not isinstance(data.get("trafficStats"), dict):
         data["trafficStats"] = {"listen": "127.0.0.1:8080"}
+        config_changed = True
         
     conn = get_db()
     c = conn.cursor()
@@ -126,11 +129,18 @@ def sync_db_to_yaml():
         
     conn.close()
     
-    data["auth"] = {
+    new_auth = {
         "type": "userpass",
         "userpass": active_userpass
     }
-    write_yaml_config(data)
+    
+    if data.get("auth") != new_auth:
+        data["auth"] = new_auth
+        config_changed = True
+        
+    if config_changed:
+        write_yaml_config(data)
+        restart_service()
 
 def sync_yaml_to_db():
     """Initial import if YAML has users not yet in DB."""
