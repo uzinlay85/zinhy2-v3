@@ -1,14 +1,16 @@
-# Hysteria2 Installer with Web UI 🚀
+# Hysteria2 Installer with Multi-User Web UI & Diagnostics 🚀
 
-ဒီ Repository မှာ Hysteria2 ကို အလွယ်တကူ Install လုပ်နိုင်မယ့် **One-Click Bash Script** နဲ့အတူ Web-based UI panel တစ်ခုပါဝင်ပါတယ်။ Hysteria2 Server ကို Terminal ကနေသာမကဘဲ Web UI ကနေပါ လွယ်လွယ်ကူကူ စီမံခန့်ခွဲနိုင်ဖို့ ပြုလုပ်ပေးထားတာဖြစ်ပါတယ်။
+ဒီ Repository မှာ Hysteria2 ကို အလွယ်တကူ Install လုပ်နိုင်မယ့် **One-Click Bash Script** နဲ့အတူ Multi-User စီမံခန့်ခွဲနိုင်မည့် **Web-based UI panel** နှင့် **Command Line Diagnostic Tool** တို့ ပါဝင်ပါတယ်။
 
 ## ပါဝင်တဲ့ Features များ 🌟
 
 - **One-Click Installer (`hysteria2-installer.sh`)**: Hysteria2 နှင့် Web UI ကို တစ်ပြိုင်နက်တည်း Install/Uninstall/Update အလွယ်တကူ လုပ်ပေးနိုင်ခြင်း။
+- **Multi-User Support (`auth.type: userpass`)**: Web UI တွင် သုံးစွဲသူ အများအပြားအတွက် Account/Password သီးသန့်ဆီ သတ်မှတ်၍ အသုံးပြုနိုင်ခြင်း။
 - **Let's Encrypt SSL အလိုအလျောက် ရယူပေးခြင်း**: Domain ကိုထည့်ပေးရုံနဲ့ SSL Certificate ကို Auto လုပ်ပေးပါတယ်။
 - **Salamander Obfuscation**: ဖုံးကွယ်ချိတ်ဆက်မှုအတွက် Obfuscation ထည့်သွင်းနိုင်ခြင်း။
-- **Web UI Panel**: Python FastAPI ကိုအသုံးပြုထားပြီး ခေတ်မီလှပတဲ့ Web Interface (Glassmorphism design) ပါဝင်ပါတယ်။ Background တွင် အမြဲ Run နေမည့် `hysteria-webui` Systemd Service ကိုပါ အလိုအလျောက် ဖန်တီးပေးပါတယ်။
-- **Client Link Generation**: v2rayN, NekoBox/NekoRay တို့အတွက် Client Config တွေကို အလိုအလျောက် ထုတ်ပေးပါတယ်။
+- **Web UI Panel & Log Viewer**: Python FastAPI ကိုအသုံးပြုထားပြီး ခေတ်မီလှပတဲ့ Web Interface (Glassmorphism design) ပါဝင်ပါတယ်။ Web UI မှတဆင့် Hysteria2 Logs နှင့် Web UI Logs များကို တိုက်ရိုက် ကြည့်ရှုနိုင်ပါသည်။
+- **System Resource Monitoring**: RAM %, Disk Space နှင့် Server Uptime များကို Web UI တွင် တိုက်ရိုက် စစ်ဆေးနိုင်ခြင်း။
+- **Command Line Checker (`status.sh`)**: Terminal ကနေ Hysteria2 & Web UI အခြေအနေ၊ Logs နှင့် System Resources များကို လျင်မြန်စွာ စစ်ဆေးနိုင်သည့် Diagnostic Tool ပါဝင်ခြင်း။
 
 ---
 
@@ -27,7 +29,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/uzinlay85/zinhy2-v3/main/hys
 - သင့် Domain ရဲ့ DNS A Record ကို သင့် VPS ရဲ့ IP address နဲ့ ချိန်ထားပေးရပါမယ်။
 - Port 80 ကို ဖွင့်ထားပေးဖို့ လိုအပ်ပါတယ်။ (Let's Encrypt SSL ရယူဖို့အတွက်)
 
-Installer ကမေးတဲ့ Port, Password, Obfuscation အစရှိတာတွေကို မိမိစိတ်ကြိုက် ဖြည့်သွင်းပေးပါ။ Installer မှ Hysteria ကို Setup လုပ်ပေးမည့်အပြင် Web UI အတွက်ပါ လိုအပ်သည်များကို (Python 3, Virtual Env, Systemd Service) အလိုအလျောက် လုပ်ဆောင်ပေးသွားမည်ဖြစ်သည်။
+---
 
 ### အဆင့် ၂: Web UI ကို အသုံးပြုခြင်း
 
@@ -35,12 +37,31 @@ Installation ပြီးဆုံးသွားပါက၊ သင့် Brows
 
 `http://<Your_Server_IP>:8000`
 
-Web UI မှတဆင့် Config များကို (Port, Password, Obfuscation) ပြင်ဆင်ခြင်း၊ Hysteria Core ကို Update ပြုလုပ်ခြင်းတို့ကို အလွယ်တကူ ဆောင်ရွက်နိုင်ပါပြီ။
+Web UI မှတဆင့် Multi-User (User ထည့်/ဖျက်/ပြင်) ပြုလုပ်ခြင်း၊ NekoBox / v2rayN Config များ ကူးယူခြင်း၊ System Logs & RAM Usage စစ်ဆေးခြင်းတို့ကို ဆောင်ရွက်နိုင်ပါသည်။
+
+---
+
+## 🔍 Command Line Diagnostic Checker Tool (`status.sh`)
+
+Terminal မှတစ်ဆင့် Hysteria2 Server အခြေအနေ၊ Config များ၊ Error Logs များ နှင့် RAM/CPU Resources များကို လျင်မြန်စွာ စစ်ဆေးလိုပါက အောက်ပါ One-Click Command ကို အသုံးပြုနိုင်ပါသည်-
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/uzinlay85/zinhy2-v3/main/status.sh)
+```
+
+**ပါဝင်သော စစ်ဆေးမှုများ:**
+1. Full System Diagnostic (အစအဆုံး စစ်ဆေးခြင်း)
+2. Hysteria 2 Config & Service အခြေအနေ
+3. Web UI Service (FastAPI) အခြေအနေ
+4. System Error Logs (Hysteria & Web UI)
+5. SSL Certificate သက်တမ်း စစ်ဆေးခြင်း
+6. RAM, Disk & CPU Resource Usage
+7. Live System Monitor (`btop` / `htop`)
 
 ---
 
 ## 🔒 လုံခြုံရေး အကြံပြုချက်များ
-- Web UI Port `8000` ကို အများပြည်သူ ဝင်ခွင့်မပြုဘဲ Firewall (UFW/Iptables) ဖြင့် ပိတ်ထားကာ၊ မိမိအသုံးပြုမည့် IP မှသာ ဖွင့်သုံးခြင်း သို့မဟုတ် Nginx Reverse Proxy (with Basic Auth) ခံပြီး သုံးစွဲရန် အကြံပြုအပ်ပါသည်။
+- Web UI Port `8000` ကို အများပြည်သူ ဝင်ခွင့်မပြုဘဲ Firewall (UFW/Iptables) ဖြင့် ပိတ်ထားကာ၊ မိမိအသုံးပြုမည့် IP မှသာ ဖွင့်သုံးခြင်း သို့မဟုတ် Nginx Reverse Proxy ขံပြီး သုံးစွဲရန် အကြံပြုအပ်ပါသည်။
 
 ## 📝 အကူအညီ
 အဆင်မပြေမှုများရှိပါက Issues တွင် ဝင်ရောက်မေးမြန်းနိုင်ပါသည်။
