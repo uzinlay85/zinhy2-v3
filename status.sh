@@ -24,8 +24,16 @@ check_hysteria() {
         echo -e "${RED}Config file not found at /etc/hysteria/config.yaml${NC}"
     fi
 
-    echo -e "\n${YELLOW}=== 2. Hysteria 2 Service Status ===${NC}"
+    echo -e "\n${YELLOW}=== 2. Hysteria 2 Service & TrafficStats API Status ===${NC}"
     systemctl status hysteria-server --no-pager 2>/dev/null || echo -e "${RED}Hysteria Service not found.${NC}"
+    
+    echo -e "\n${YELLOW}--- TrafficStats REST API (127.0.0.1:8080) Test ---${NC}"
+    if curl -s http://127.0.0.1:8080/online > /dev/null; then
+        echo -e "${GREEN}✓ TrafficStats API is UP and responding (127.0.0.1:8080)${NC}"
+        echo -e "Online status response: $(curl -s http://127.0.0.1:8080/online)"
+    else
+        echo -e "${RED}✗ TrafficStats API is NOT responding on http://127.0.0.1:8080${NC}"
+    fi
 }
 
 check_webui() {

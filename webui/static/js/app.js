@@ -7,13 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSystemResources();
     fetchLogs(activeLogTab);
     
-    // Auto-refresh stats and config every 15s
+    // Auto-refresh stats and config every 3s for realtime data usage & online status
     setInterval(() => {
         if (document.getElementById('configSection').style.display !== 'none') {
             fetchSystemResources();
             loadConfig();
         }
-    }, 15000);
+    }, 3000);
 });
 
 function showToast(msg) {
@@ -118,13 +118,22 @@ async function loadConfig() {
         document.getElementById('confDomain').innerText = data.domain;
         document.getElementById('confPort').innerText = data.port;
         document.getElementById('confObfs').innerText = data.obfs_enabled ? `Enabled (Pass: ${data.obfs_password})` : "Disabled";
-        document.getElementById('userCount').innerText = data.users ? data.users.length : 0;
+        
+        const totalUsers = data.users ? data.users.length : 0;
+        const onlineCount = data.online_count || 0;
+        document.getElementById('userCount').innerText = `${totalUsers} (${onlineCount} Online)`;
 
-        // Pre-fill Server Config Modal
-        document.getElementById('editPort').value = data.port;
-        document.getElementById('editObfsEnabled').checked = data.obfs_enabled;
-        document.getElementById('editObfsPassword').value = data.obfs_password;
-        toggleObfsPassword();
+        if (document.getElementById('totalDataUsage')) {
+            document.getElementById('totalDataUsage').innerText = data.total_data_formatted || "0.0 KB";
+        }
+
+        // Pre-fill Server Config Modal only if not actively being edited
+        if (!document.getElementById('configModal').classList.contains('active')) {
+            document.getElementById('editPort').value = data.port;
+            document.getElementById('editObfsEnabled').checked = data.obfs_enabled;
+            document.getElementById('editObfsPassword').value = data.obfs_password;
+            toggleObfsPassword();
+        }
 
         // Render Users Grid
         renderUsersGrid(data.users || []);
@@ -137,6 +146,16 @@ async function loadConfig() {
 function renderUsersGrid(users) {
     userLinksMap = {};
     const grid = document.getElementById('usersGrid');
+    
+    // Preserve existing password toggle state before re-render
+    const existingPwdStates = {};
+    users.forEach(u => {
+        const pwdEl = document.getElementById(`pwd-${u.username}`);
+        if (pwdEl && pwdEl.innerText !== '••••••••••••') {
+            existingPwdStates[u.username] = true;
+        }
+    });
+
     grid.innerHTML = '';
 
     if (users.length === 0) {
@@ -170,7 +189,7 @@ function renderUsersGrid(users) {
         };
 
         const card = document.createElement('div');
-        card.className = 'user-card';
+        card.className = `user-card ${user.is_online ? 'online-card' : ''}`;
         const initial = user.username.charAt(0).toUpperCase();
         const safeUser = escapeHtml(user.username);
 
@@ -181,6 +200,14 @@ function renderUsersGrid(users) {
         else if (user.status_label === "Disabled" || user.status_label === "Data Exceeded") dotClass = "disabled";
 
         const percent = Math.min(user.usage_percent || 0, 100);
+        
+        const statusBadgeHtml = user.is_online ? 
+            `<div class="badge-online"><i data-lucide="wifi" class="lucide-icon icon-12"></i> Online Now</div>` :
+            `<div class="user-status-text">${user.status_label} • ${user.last_seen_str}</div>`;
+
+        const isPwdRevealed = existingPwdStates[user.username];
+        const pwdDisplayStr = isPwdRevealed ? escapeHtml(user.password) : '••••••••••••';
+        const eyeIcon = isPwdRevealed ? 'eye-off' : 'eye';
 
         card.innerHTML = `
             <div class="user-card-header">
@@ -191,7 +218,7 @@ function renderUsersGrid(users) {
                     </div>
                     <div class="user-name-group">
                         <div class="user-name">${safeUser}</div>
-                        <div class="user-status-text">${user.status_label} • ${user.last_seen_str}</div>
+                        ${statusBadgeHtml}
                     </div>
                 </div>
                 <div class="user-actions">
@@ -225,9 +252,9 @@ function renderUsersGrid(users) {
                 <div class="user-field">
                     <label>Password</label>
                     <div class="password-display">
-                        <div class="password-text" id="pwd-${safeUser}">••••••••••••</div>
+                        <div class="password-text" id="pwd-${safeUser}">${pwdDisplayStr}</div>
                         <button class="btn btn-ghost btn-icon btn-sm" onclick="togglePasswordVisibility('${safeUser}', '${escapeHtml(user.password)}')">
-                            <i data-lucide="eye" id="eye-${safeUser}" class="lucide-icon icon-16"></i>
+                            <i data-lucide="${eyeIcon}" id="eye-${safeUser}" class="lucide-icon icon-16"></i>
                         </button>
                     </div>
                 </div>

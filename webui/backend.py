@@ -178,60 +178,61 @@ sync_yaml_to_db()
 # --- Traffic & Online Background Poller ---
 online_users_set = set()
 
+async def fetch_url_json(url):
+    def _fetch():
+        no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        req = urllib.request.Request(url)
+        with no_proxy_opener.open(req, timeout=3) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode('utf-8'))
+        return None
+    try:
+        return await asyncio.to_thread(_fetch)
+    except Exception:
+        return None
+
 async def traffic_poller():
     global online_users_set
-    no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     
     while True:
         try:
             if os.name != 'nt':
                 # 1. Fetch traffic stats and clear counter
-                try:
-                    req = urllib.request.Request(f"{TRAFFIC_API_URL}/traffic?clear=1")
-                    with no_proxy_opener.open(req, timeout=3) as resp:
-                        if resp.status == 200:
-                            traffic_data = json.loads(resp.read().decode('utf-8'))
-                            if isinstance(traffic_data, dict) and traffic_data:
-                                conn = get_db()
-                                c = conn.cursor()
-                                for u, stats in traffic_data.items():
-                                    total_bytes = 0
-                                    if isinstance(stats, dict):
-                                        total_bytes = stats.get("tx", 0) + stats.get("rx", 0)
-                                    elif isinstance(stats, (int, float)):
-                                        total_bytes = int(stats)
-                                        
-                                    if total_bytes > 0:
-                                        c.execute("UPDATE users SET data_used_bytes = data_used_bytes + ? WHERE username = ?", (total_bytes, u))
-                                conn.commit()
-                                conn.close()
-                except Exception as err:
-                    pass
+                traffic_data = await fetch_url_json(f"{TRAFFIC_API_URL}/traffic?clear=1")
+                if isinstance(traffic_data, dict) and traffic_data:
+                    conn = get_db()
+                    c = conn.cursor()
+                    for u, stats in traffic_data.items():
+                        total_bytes = 0
+                        if isinstance(stats, dict):
+                            total_bytes = stats.get("tx", 0) + stats.get("rx", 0)
+                        elif isinstance(stats, (int, float)):
+                            total_bytes = int(stats)
+                            
+                        if total_bytes > 0:
+                            c.execute("UPDATE users SET data_used_bytes = data_used_bytes + ? WHERE username = ?", (total_bytes, u))
+                    conn.commit()
+                    conn.close()
 
                 # 2. Fetch online users & update last_seen
-                try:
-                    req = urllib.request.Request(f"{TRAFFIC_API_URL}/online")
-                    with no_proxy_opener.open(req, timeout=3) as resp:
-                        if resp.status == 200:
-                            online_resp_data = json.loads(resp.read().decode('utf-8'))
-                            current_online = set()
-                            if isinstance(online_resp_data, dict):
-                                current_online = set(online_resp_data.keys())
-                            elif isinstance(online_resp_data, list):
-                                current_online = set(online_resp_data)
-                                
-                            went_offline = online_users_set - current_online
-                            now_ts = int(time.time())
-                            if went_offline:
-                                conn = get_db()
-                                c = conn.cursor()
-                                for u in went_offline:
-                                    c.execute("UPDATE users SET last_seen = ? WHERE username = ?", (now_ts, u))
-                                conn.commit()
-                                conn.close()
-                            online_users_set = current_online
-                except Exception as err:
-                    pass
+                online_resp_data = await fetch_url_json(f"{TRAFFIC_API_URL}/online")
+                if online_resp_data is not None:
+                    current_online = set()
+                    if isinstance(online_resp_data, dict):
+                        current_online = set(online_resp_data.keys())
+                    elif isinstance(online_resp_data, list):
+                        current_online = set(online_resp_data)
+                    
+                    now_ts = int(time.time())
+                    if current_online:
+                        conn = get_db()
+                        c = conn.cursor()
+                        for u in current_online:
+                            c.execute("UPDATE users SET last_seen = ? WHERE username = ?", (now_ts, u))
+                        conn.commit()
+                        conn.close()
+                        
+                    online_users_set = current_online
 
                 # 3. Check for exceeded limits & sync YAML if needed
                 sync_db_to_yaml()
@@ -239,7 +240,7 @@ async def traffic_poller():
         except Exception as e:
             print("Traffic poller error:", e)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
 
 @app.on_event("startup")
 async def startup_event():
@@ -363,11 +364,18 @@ def get_config():
             "last_seen_str": format_last_seen(username, u_dict["last_seen"])
         })
     
+    total_data_bytes = sum(r["data_used_bytes"] for r in rows)
+    online_count = sum(1 for r in rows if r["username"] in online_users_set)
+
     return {
         "port": port,
         "domain": domain,
         "obfs_enabled": obfs_enabled,
         "obfs_password": obfs_password,
+        "total_users": len(rows),
+        "online_count": online_count,
+        "total_data_bytes": total_data_bytes,
+        "total_data_formatted": format_bytes(total_data_bytes),
         "users": users
     }
 

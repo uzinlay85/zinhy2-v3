@@ -178,6 +178,7 @@ h1, h2, h3 {
 .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .stat-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .stat-icon.purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+.stat-icon.cyan { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
 .stat-icon.orange { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
 .stat-label {
@@ -307,10 +308,37 @@ h1, h2, h3 {
     border: 2px solid #0f172a;
 }
 
-.status-dot.online { background: var(--success); }
+.status-dot.online { 
+    background: var(--success);
+    box-shadow: 0 0 8px #10b981;
+    animation: pulseDot 2s infinite;
+}
 .status-dot.active { background: var(--primary); }
 .status-dot.expired { background: var(--warning); }
 .status-dot.disabled { background: var(--danger); }
+
+@keyframes pulseDot {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.user-card.online-card {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.04);
+}
+
+.badge-online {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
 
 .user-name-group {
     display: flex;
