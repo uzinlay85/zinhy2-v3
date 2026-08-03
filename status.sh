@@ -81,6 +81,11 @@ show_btop() {
     fi
 }
 
+show_live_hysteria_logs() {
+    echo -e "\n${YELLOW}=== Hysteria 2 Live Logs (Press Ctrl+C to stop) ===${NC}\n"
+    journalctl -u hysteria-server -f
+}
+
 full_diagnostic() {
     show_banner
     check_hysteria
@@ -106,23 +111,25 @@ while true; do
     echo -e "${GREEN}2)${NC} Hysteria 2 Config & Service Status"
     echo -e "${GREEN}3)${NC} Web UI Service Status"
     echo -e "${GREEN}4)${NC} System Logs (Hysteria & Web UI)"
-    echo -e "${GREEN}5)${NC} SSL Certificate Status"
-    echo -e "${GREEN}6)${NC} System Resources (CPU / RAM / Disk)"
-    echo -e "${GREEN}7)${NC} Live Resource Monitor (btop / htop)"
-    echo -e "${GREEN}8)${NC} Exit"
+    echo -e "${GREEN}5)${NC} Hysteria 2 Live Logs (Realtime Stream)"
+    echo -e "${GREEN}6)${NC} SSL Certificate Status"
+    echo -e "${GREEN}7)${NC} System Resources (CPU / RAM / Disk)"
+    echo -e "${GREEN}8)${NC} Live Resource Monitor (btop / htop)"
+    echo -e "${GREEN}9)${NC} Exit"
     echo -e "${CYAN}========================================================${NC}"
     
-    read -p "Choose option [1-8]: " choice < /dev/tty
+    read -p "Choose option [1-9]: " choice < /dev/tty
     
     case $choice in
         1) full_diagnostic ;;
         2) check_hysteria ;;
         3) check_webui ;;
         4) check_logs ;;
-        5) check_ssl ;;
-        6) check_system_resources ;;
-        7) show_btop ;;
-        8) echo -e "\n${GREEN}Bye!${NC}\n"; exit 0 ;;
+        5) show_live_hysteria_logs ;;
+        6) check_ssl ;;
+        7) check_system_resources ;;
+        8) show_btop ;;
+        9) echo -e "\n${GREEN}Bye!${NC}\n"; exit 0 ;;
         *) echo -e "\n${RED}Invalid option!${NC}" ;;
     esac
 done
