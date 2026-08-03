@@ -591,10 +591,10 @@ systemctl daemon-reload
 systemctl enable hysteria-webui > /dev/null 2>&1
 systemctl restart hysteria-webui
 
-server_ip=\$(curl -sSL ipv4.icanhazip.com || echo "your_server_ip")
+server_ip=$(curl -sSL ipv4.icanhazip.com || echo "your_server_ip")
 
 echo "======================================"
 echo "Web UI Installation Complete!"
-echo "You can access the Web UI at: http://\$server_ip:8000"
+echo "You can access the Web UI at: http://$server_ip:8000"
 echo "======================================"
 echo ""
