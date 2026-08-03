@@ -604,9 +604,13 @@ systemctl enable hysteria-webui > /dev/null 2>&1
 systemctl restart hysteria-webui
 
 server_ip=$(curl -sSL ipv4.icanhazip.com || echo "your_server_ip")
+webui_host="${domain:-$server_ip}"
 
 echo "======================================"
 echo "Web UI Installation Complete!"
-echo "You can access the Web UI at: http://$server_ip:8000"
+echo "You can access the Web UI at: http://$webui_host:8000"
+if [ -n "$domain" ] && [ "$webui_host" != "$server_ip" ]; then
+    echo "Alternative IP link: http://$server_ip:8000"
+fi
 echo "======================================"
 echo ""
