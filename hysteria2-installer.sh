@@ -163,6 +163,8 @@ outbounds:
 tls:
   cert: $current_cert
   key: $current_key
+trafficStats:
+  listen: 127.0.0.1:8080
 auth:
   type: password
   password: $new_password"
@@ -478,6 +480,8 @@ config_yaml="listen: :$port
 tls:
   cert: $cert_path
   key: $key_path
+trafficStats:
+  listen: 127.0.0.1:8080
 auth:
   type: userpass
   userpass:

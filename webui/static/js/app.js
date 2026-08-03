@@ -7,10 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSystemResources();
     fetchLogs(activeLogTab);
     
-    // Auto-refresh resources every 15s
+    // Auto-refresh stats and config every 15s
     setInterval(() => {
         if (document.getElementById('configSection').style.display !== 'none') {
             fetchSystemResources();
+            loadConfig();
         }
     }, 15000);
 });
@@ -80,7 +81,7 @@ async function fetchLogs(service) {
         if (!res.ok) throw new Error("Failed to fetch logs");
         const data = await res.json();
         container.innerText = data.logs || "No logs available.";
-        container.scrollTop = container.scrollHeight; // Auto-scroll to bottom
+        container.scrollTop = container.scrollHeight;
     } catch (e) {
         container.innerText = "Error fetching logs: " + e.message;
     }
@@ -173,14 +174,31 @@ function renderUsersGrid(users) {
         const initial = user.username.charAt(0).toUpperCase();
         const safeUser = escapeHtml(user.username);
 
+        // Status Dot & Label
+        let dotClass = "active";
+        if (user.is_online) dotClass = "online";
+        else if (user.status_label === "Expired") dotClass = "expired";
+        else if (user.status_label === "Disabled" || user.status_label === "Data Exceeded") dotClass = "disabled";
+
+        const percent = Math.min(user.usage_percent || 0, 100);
+
         card.innerHTML = `
             <div class="user-card-header">
                 <div class="user-badge">
-                    <div class="user-avatar">${initial}</div>
-                    <div class="user-name">${safeUser}</div>
+                    <div class="user-avatar-wrapper">
+                        <div class="user-avatar">${initial}</div>
+                        <div class="status-dot ${dotClass}" title="${user.status_label}"></div>
+                    </div>
+                    <div class="user-name-group">
+                        <div class="user-name">${safeUser}</div>
+                        <div class="user-status-text">${user.status_label} • ${user.last_seen_str}</div>
+                    </div>
                 </div>
                 <div class="user-actions">
-                    <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditUserModal('${safeUser}', '${escapeHtml(user.password)}')" title="Edit Password">
+                    <button class="btn btn-ghost btn-icon btn-sm" onclick="resetUserData('${safeUser}')" title="Reset Traffic Usage">
+                        <i data-lucide="rotate-ccw" class="lucide-icon icon-16"></i>
+                    </button>
+                    <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditUserModal('${safeUser}', '${escapeHtml(user.password)}', ${user.data_limit_gb}, '${user.expire_date || ''}', ${user.is_active})" title="Edit User Settings">
                         <i data-lucide="edit-3" class="lucide-icon icon-16"></i>
                     </button>
                     <button class="btn btn-danger btn-icon btn-sm" onclick="deleteUser('${safeUser}')" title="Delete User">
@@ -189,6 +207,21 @@ function renderUsersGrid(users) {
                 </div>
             </div>
             <div class="user-card-body">
+                <div class="user-field">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label>Data Usage</label>
+                        <span style="font-size:12px; font-weight:600;">${user.data_used_formatted} / ${user.data_limit_formatted}</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill ${percent >= 100 ? 'exceeded' : ''}" style="width: ${percent}%;"></div>
+                    </div>
+                </div>
+                
+                <div class="user-stats-row">
+                    <div class="stat-pill"><i data-lucide="calendar" class="lucide-icon icon-14"></i> ${user.days_left}</div>
+                    <div class="stat-pill"><i data-lucide="clock" class="lucide-icon icon-14"></i> ${user.last_seen_str}</div>
+                </div>
+
                 <div class="user-field">
                     <label>Password</label>
                     <div class="password-display">
@@ -276,9 +309,34 @@ function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
+// Add User Modal Date Presets
+function setAddDatePreset(days) {
+    const dateInput = document.getElementById('addExpireDate');
+    if (days === 0) {
+        dateInput.value = '';
+        return;
+    }
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+    dateInput.value = targetDate.toISOString().split('T')[0];
+}
+
+function setEditDatePreset(days) {
+    const dateInput = document.getElementById('editExpireDate');
+    if (days === 0) {
+        dateInput.value = '';
+        return;
+    }
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+    dateInput.value = targetDate.toISOString().split('T')[0];
+}
+
 // Add User Modal
 function openAddUserModal() {
     document.getElementById('addUsername').value = '';
+    document.getElementById('addDataLimit').value = '0';
+    document.getElementById('addExpireDate').value = '';
     generateRandomAddPassword();
     document.getElementById('addUserModal').classList.add('active');
 }
@@ -300,12 +358,14 @@ async function saveAddUser(e) {
     e.preventDefault();
     const username = document.getElementById('addUsername').value.trim();
     const password = document.getElementById('addPassword').value.trim();
+    const data_limit_gb = parseFloat(document.getElementById('addDataLimit').value) || 0;
+    const expire_date = document.getElementById('addExpireDate').value;
 
     try {
         const res = await fetch('/api/users', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, data_limit_gb, expire_date })
         });
         const data = await res.json();
         if (data.success) {
@@ -321,10 +381,13 @@ async function saveAddUser(e) {
 }
 
 // Edit User Modal
-function openEditUserModal(username, currentPassword) {
+function openEditUserModal(username, currentPassword, dataLimitGb, expireDate, isActive) {
     document.getElementById('editTargetUsername').value = username;
     document.getElementById('editDisplayUsername').value = username;
     document.getElementById('editUserPassword').value = currentPassword;
+    document.getElementById('editDataLimit').value = dataLimitGb || 0;
+    document.getElementById('editExpireDate').value = expireDate || '';
+    document.getElementById('editIsActive').checked = isActive !== false;
     document.getElementById('editUserModal').classList.add('active');
 }
 
@@ -345,16 +408,19 @@ async function saveEditUser(e) {
     e.preventDefault();
     const username = document.getElementById('editTargetUsername').value;
     const password = document.getElementById('editUserPassword').value.trim();
+    const data_limit_gb = parseFloat(document.getElementById('editDataLimit').value) || 0;
+    const expire_date = document.getElementById('editExpireDate').value;
+    const is_active = document.getElementById('editIsActive').checked;
 
     try {
         const res = await fetch(`/api/users/${encodeURIComponent(username)}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ password })
+            body: JSON.stringify({ password, data_limit_gb, expire_date, is_active })
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`User '${username}' password updated!`);
+            showToast(`User '${username}' updated!`);
             closeEditUserModal();
             loadConfig();
         } else {
@@ -362,6 +428,26 @@ async function saveEditUser(e) {
         }
     } catch (err) {
         alert("Failed to update user.");
+    }
+}
+
+// Reset Data Usage
+async function resetUserData(username) {
+    if (!confirm(`Are you sure you want to reset traffic usage for '${username}'?`)) return;
+
+    try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/reset_data`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Traffic reset for '${username}'!`);
+            loadConfig();
+        } else {
+            alert("Error: " + (data.detail || "Failed to reset traffic"));
+        }
+    } catch (err) {
+        alert("Failed to reset traffic.");
     }
 }
 

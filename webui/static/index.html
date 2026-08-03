@@ -150,7 +150,7 @@
 
 <!-- Add User Modal -->
 <div id="addUserModal" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 480px;">
         <div class="modal-header">
             <h2 class="modal-title">Add New User</h2>
             <button class="modal-close" onclick="closeAddUserModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
@@ -167,6 +167,21 @@
                     <button type="button" onclick="generateRandomAddPassword()" class="btn btn-ghost" title="Generate Random"><i data-lucide="shuffle" class="lucide-icon icon-16"></i></button>
                 </div>
             </div>
+            <div class="form-group">
+                <label>Data Limit (GB) <span style="font-size:12px; opacity:0.7;">(0 = Unlimited)</span></label>
+                <input type="number" step="0.5" id="addDataLimit" class="form-control" placeholder="0" value="0">
+            </div>
+            <div class="form-group">
+                <label>Expire Date <span style="font-size:12px; opacity:0.7;">(YYYY-MM-DD)</span></label>
+                <input type="date" id="addExpireDate" class="form-control">
+                <div class="date-presets">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setAddDatePreset(7)">7 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setAddDatePreset(30)">30 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setAddDatePreset(60)">60 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setAddDatePreset(90)">90 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setAddDatePreset(0)">Clear</button>
+                </div>
+            </div>
         </form>
         <div class="modal-footer">
             <button type="button" onclick="closeAddUserModal()" class="btn btn-ghost">Cancel</button>
@@ -175,11 +190,11 @@
     </div>
 </div>
 
-<!-- Edit User Password Modal -->
+<!-- Edit User Modal -->
 <div id="editUserModal" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 480px;">
         <div class="modal-header">
-            <h2 class="modal-title">Edit User Password</h2>
+            <h2 class="modal-title">Edit User Settings</h2>
             <button class="modal-close" onclick="closeEditUserModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
         </div>
         <form id="editUserForm" onsubmit="saveEditUser(event)">
@@ -189,16 +204,35 @@
                 <input type="text" id="editDisplayUsername" readonly class="form-control" style="opacity: 0.7;">
             </div>
             <div class="form-group">
-                <label>New Password</label>
+                <label>Password</label>
                 <div class="input-copy-group">
                     <input type="text" id="editUserPassword" required class="form-control" placeholder="New password">
                     <button type="button" onclick="generateRandomEditPassword()" class="btn btn-ghost" title="Generate Random"><i data-lucide="shuffle" class="lucide-icon icon-16"></i></button>
                 </div>
             </div>
+            <div class="form-group">
+                <label>Data Limit (GB) <span style="font-size:12px; opacity:0.7;">(0 = Unlimited)</span></label>
+                <input type="number" step="0.5" id="editDataLimit" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Expire Date <span style="font-size:12px; opacity:0.7;">(YYYY-MM-DD)</span></label>
+                <input type="date" id="editExpireDate" class="form-control">
+                <div class="date-presets">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setEditDatePreset(7)">7 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setEditDatePreset(30)">30 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setEditDatePreset(60)">60 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setEditDatePreset(90)">90 Days</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setEditDatePreset(0)">Clear</button>
+                </div>
+            </div>
+            <div class="checkbox-row" style="margin-top: 15px;">
+                <input type="checkbox" id="editIsActive">
+                <label for="editIsActive">Account Active / Enabled</label>
+            </div>
         </form>
         <div class="modal-footer">
             <button type="button" onclick="closeEditUserModal()" class="btn btn-ghost">Cancel</button>
-            <button type="submit" form="editUserForm" class="btn btn-primary">Update Password</button>
+            <button type="submit" form="editUserForm" class="btn btn-primary">Save Changes</button>
         </div>
     </div>
 </div>
