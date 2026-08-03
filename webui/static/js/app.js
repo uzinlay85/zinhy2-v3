@@ -1,4 +1,5 @@
 let currentServerConfig = {};
+let userLinksMap = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     checkStatus();
@@ -67,6 +68,7 @@ async function loadConfig() {
 }
 
 function renderUsersGrid(users) {
+    userLinksMap = {};
     const grid = document.getElementById('usersGrid');
     grid.innerHTML = '';
 
@@ -95,21 +97,27 @@ function renderUsersGrid(users) {
         }
         v2Config += `tls:\n  sni: ${domain}\n  insecure: false\nfastOpen: true\nsocks5:\n  listen: 127.0.0.1:10808\nhttp:\n  listen: 127.0.0.1:10809`;
 
+        userLinksMap[user.username] = {
+            nekoUrl: nekoUrl,
+            v2Config: v2Config
+        };
+
         const card = document.createElement('div');
         card.className = 'user-card';
         const initial = user.username.charAt(0).toUpperCase();
+        const safeUser = escapeHtml(user.username);
 
         card.innerHTML = `
             <div class="user-card-header">
                 <div class="user-badge">
                     <div class="user-avatar">${initial}</div>
-                    <div class="user-name">${escapeHtml(user.username)}</div>
+                    <div class="user-name">${safeUser}</div>
                 </div>
                 <div class="user-actions">
-                    <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditUserModal('${escapeHtml(user.username)}', '${escapeHtml(user.password)}')" title="Edit Password">
+                    <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditUserModal('${safeUser}', '${escapeHtml(user.password)}')" title="Edit Password">
                         <i data-lucide="edit-3" class="lucide-icon icon-16"></i>
                     </button>
-                    <button class="btn btn-danger btn-icon btn-sm" onclick="deleteUser('${escapeHtml(user.username)}')" title="Delete User">
+                    <button class="btn btn-danger btn-icon btn-sm" onclick="deleteUser('${safeUser}')" title="Delete User">
                         <i data-lucide="trash-2" class="lucide-icon icon-16"></i>
                     </button>
                 </div>
@@ -118,18 +126,18 @@ function renderUsersGrid(users) {
                 <div class="user-field">
                     <label>Password</label>
                     <div class="password-display">
-                        <div class="password-text" id="pwd-${escapeHtml(user.username)}">••••••••••••</div>
-                        <button class="btn btn-ghost btn-icon btn-sm" onclick="togglePasswordVisibility('${escapeHtml(user.username)}', '${escapeHtml(user.password)}')">
-                            <i data-lucide="eye" id="eye-${escapeHtml(user.username)}" class="lucide-icon icon-16"></i>
+                        <div class="password-text" id="pwd-${safeUser}">••••••••••••</div>
+                        <button class="btn btn-ghost btn-icon btn-sm" onclick="togglePasswordVisibility('${safeUser}', '${escapeHtml(user.password)}')">
+                            <i data-lucide="eye" id="eye-${safeUser}" class="lucide-icon icon-16"></i>
                         </button>
                     </div>
                 </div>
             </div>
             <div class="user-card-footer">
-                <button class="btn btn-primary btn-sm" style="flex:1;" onclick="copyTextToClipboard('${escapeJsString(nekoUrl)}')">
+                <button class="btn btn-primary btn-sm" style="flex:1;" onclick="copyNekoLink('${safeUser}')">
                     <i data-lucide="copy" class="lucide-icon icon-14"></i> NekoBox Link
                 </button>
-                <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="openV2rayModal('${escapeHtml(user.username)}', '${escapeJsString(v2Config)}')">
+                <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="openV2rayModal('${safeUser}')">
                     <i data-lucide="file-text" class="lucide-icon icon-14"></i> v2rayN Config
                 </button>
             </div>
@@ -139,6 +147,12 @@ function renderUsersGrid(users) {
 
     if (window.lucide) {
         lucide.createIcons();
+    }
+}
+
+function copyNekoLink(username) {
+    if (userLinksMap[username] && userLinksMap[username].nekoUrl) {
+        copyTextToClipboard(userLinksMap[username].nekoUrl);
     }
 }
 
@@ -158,19 +172,42 @@ function togglePasswordVisibility(username, password) {
 }
 
 function copyTextToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast("Copied to clipboard!");
-    }).catch(err => {
-        alert("Copy failed: " + err);
-    });
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("Copied to clipboard!");
+        }).catch(() => {
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast("Copied to clipboard!");
+        } else {
+            prompt("Copy to clipboard manually (Ctrl+C, Enter):", text);
+        }
+    } catch (err) {
+        prompt("Copy to clipboard manually (Ctrl+C, Enter):", text);
+    }
+    document.body.removeChild(textArea);
 }
 
 function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-function escapeJsString(str) {
-    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
 }
 
 // Add User Modal
@@ -283,10 +320,12 @@ async function deleteUser(username) {
 }
 
 // v2rayN Modal
-function openV2rayModal(username, configText) {
-    document.getElementById('v2rayUsernameDisplay').innerText = username;
-    document.getElementById('v2rayTextarea').value = configText;
-    document.getElementById('v2rayModal').classList.add('active');
+function openV2rayModal(username) {
+    if (userLinksMap[username] && userLinksMap[username].v2Config) {
+        document.getElementById('v2rayUsernameDisplay').innerText = username;
+        document.getElementById('v2rayTextarea').value = userLinksMap[username].v2Config;
+        document.getElementById('v2rayModal').classList.add('active');
+    }
 }
 
 function closeV2rayModal() {
