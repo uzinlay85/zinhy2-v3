@@ -249,49 +249,50 @@ http:
         5)
             # Show current link
             current_port=$(grep -oP 'listen: :\K\d+' /etc/hysteria/config.yaml || echo "443")
-            current_password=$(awk '/^auth:/{f=1; next} f && /^[^ ]/{f=0} f && /password:/{print $2; exit}' /etc/hysteria/config.yaml)
             current_domain=$(grep -oP 'cert: .*/live/\K[^/]+' /etc/hysteria/config.yaml || echo "example.com")
             current_obfs_password=$(awk '/^obfs:/{f=1; next} f && /^[^ ]/{f=0} f && /password:/{print $2; exit}' /etc/hysteria/config.yaml)
 
             echo ""
-            echo "v2rayN client config:"
-            v2rayN_config="server: $current_domain:$current_port
-auth: $current_password
-tls:
-  sni: $current_domain
-  insecure: false
-fastOpen: true
-socks5:
-  listen: 127.0.0.1:10808
-http:
-  listen: 127.0.0.1:10809"
-            if [ -n "$current_obfs_password" ]; then
-                v2rayN_config="server: $current_domain:$current_port
-auth: $current_password
-obfs:
-  type: salamander
-  salamander:
-    password: $current_obfs_password
-tls:
-  sni: $current_domain
-  insecure: false
-fastOpen: true
-socks5:
-  listen: 127.0.0.1:10808
-http:
-  listen: 127.0.0.1:10809"
-            fi
-            echo "$v2rayN_config"
-            echo ""
+            echo "======================================"
+            echo "Current Hysteria 2 User Links"
+            echo "======================================"
 
-            echo "NekoBox/NekoRay URL:"
-            if [ -n "$current_obfs_password" ]; then
-                nekobox_url="hysteria2://$current_password@$current_domain:$current_port/?insecure=0&sni=$current_domain&obfs=salamander&obfs-password=$current_obfs_password#Hysteria2-$((RANDOM % 9000 + 1000))"
-            else
-                nekobox_url="hysteria2://$current_password@$current_domain:$current_port/?insecure=0&sni=$current_domain#Hysteria2-$((RANDOM % 9000 + 1000))"
-            fi
-            echo "$nekobox_url"
-            echo ""
+            python3 -c "
+import yaml
+try:
+    with open('/etc/hysteria/config.yaml') as f:
+        data = yaml.safe_load(f)
+    auth = data.get('auth', {})
+    auth_type = auth.get('type', 'password')
+    users = {}
+    if auth_type == 'userpass':
+        users = auth.get('userpass', {})
+    else:
+        users = {'user1': auth.get('password', '')}
+    
+    domain = '$current_domain'
+    port = '$current_port'
+    obfs = '$current_obfs_password'
+
+    for u, p in users.items():
+        auth_str = f'{u}:{p}'
+        print(f'--- User: {u} ---')
+        print('v2rayN client config:')
+        v2 = f'server: {domain}:{port}\nauth: {auth_str}\n'
+        if obfs:
+            v2 += f'obfs:\n  type: salamander\n  salamander:\n    password: {obfs}\n'
+        v2 += f'tls:\n  sni: {domain}\n  insecure: false\nfastOpen: true\nsocks5:\n  listen: 127.0.0.1:10808\nhttp:\n  listen: 127.0.0.1:10809'
+        print(v2)
+        print('\nNekoBox/NekoRay URL:')
+        neko = f'hysteria2://{auth_str}@{domain}:{port}/?insecure=0&sni={domain}'
+        if obfs:
+            neko += f'&obfs=salamander&obfs-password={obfs}'
+        neko += f'#{u}-Hysteria2'
+        print(neko)
+        print('')
+except Exception as e:
+    print(e)
+" 2>/dev/null
             exit 0
             ;;
         *)
@@ -417,6 +418,10 @@ read -r -p "Enter a port (or press enter for a random port): " port </dev/tty
 [ -z "$port" ] && port=$((RANDOM + 10000))
 
 echo ""
+read -r -p "Enter initial username (or press enter for 'user1'): " username </dev/tty
+[ -z "$username" ] && username="user1"
+
+echo ""
 read -r -p "Enter a password (or press enter for a random password): " password </dev/tty
 [ -z "$password" ] && password=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 16 | head -n 1)
 
@@ -474,8 +479,9 @@ tls:
   cert: $cert_path
   key: $key_path
 auth:
-  type: password
-  password: $password"
+  type: userpass
+  userpass:
+    $username: $password"
 
 if [ -n "$obfs_password" ]; then
     config_yaml="$config_yaml
@@ -503,15 +509,17 @@ systemctl enable hysteria-server > /dev/null 2>&1
 systemctl restart hysteria-server
 
 # Step 6: Generate and print client config files
+auth_str="$username:$password"
 echo ""
 echo "======================================"
 echo "Hysteria 2 Installation Complete!"
 echo "======================================"
 echo ""
+echo "Initial User: $username"
 echo "v2rayN client config:"
 echo ""
 v2rayN_config="server: $domain:$port
-auth: $password
+auth: $auth_str
 tls:
   sni: $domain
   insecure: false
@@ -522,7 +530,7 @@ http:
   listen: 127.0.0.1:10809"
 if [ -n "$obfs_password" ]; then
     v2rayN_config="server: $domain:$port
-auth: $password
+auth: $auth_str
 obfs:
   type: salamander
   salamander:
@@ -541,9 +549,9 @@ echo ""
 echo "NekoBox/NekoRay URL:"
 echo ""
 if [ -n "$obfs_password" ]; then
-    nekobox_url="hysteria2://$password@$domain:$port/?insecure=0&sni=$domain&obfs=salamander&obfs-password=$obfs_password#Hysteria2-$((RANDOM % 9000 + 1000))"
+    nekobox_url="hysteria2://$auth_str@$domain:$port/?insecure=0&sni=$domain&obfs=salamander&obfs-password=$obfs_password#$username-Hysteria2-$((RANDOM % 9000 + 1000))"
 else
-    nekobox_url="hysteria2://$password@$domain:$port/?insecure=0&sni=$domain#Hysteria2-$((RANDOM % 9000 + 1000))"
+    nekobox_url="hysteria2://$auth_str@$domain:$port/?insecure=0&sni=$domain#$username-Hysteria2-$((RANDOM % 9000 + 1000))"
 fi
 echo "$nekobox_url"
 echo ""

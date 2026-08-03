@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hysteria 2 Installer Panel</title>
+    <title>Hysteria 2 Installer & Multi-User Panel</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%236366f1' /><stop offset='100%25' stop-color='%2306b6d4' /></linearGradient></defs><rect width='100' height='100' rx='25' fill='url(%23g)' /><path d='M58 20L32 60h20l-8 25 32-40H54l10-25z' fill='white' /></svg>" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
     <div class="header-inner">
         <div class="header-brand">
             <div class="dot"><i data-lucide="zap" class="lucide-icon icon-20" style="color:white;fill:white"></i></div>
-            <h1>Hysteria 2 Installer</h1>
+            <h1>Hysteria 2 Multi-User Panel</h1>
         </div>
         <div class="header-actions">
             <button onclick="updateHysteria()" class="btn btn-primary" id="updateBtn">
@@ -43,13 +43,18 @@
             <div class="stat-icon green"><i data-lucide="activity" class="lucide-icon icon-22"></i></div>
             <div><div class="stat-label">Hysteria Service</div><div class="stat-value" id="svcStatus">Checking...</div></div>
         </div>
+        <div class="stat-card">
+            <div class="stat-icon purple"><i data-lucide="users" class="lucide-icon icon-22"></i></div>
+            <div><div class="stat-label">Total Active Users</div><div class="stat-value" id="userCount">-</div></div>
+        </div>
     </div>
 
     <div class="config-section" id="configSection" style="display: none;">
+        <!-- Server Config Panel -->
         <div class="panel">
             <div class="panel-header">
-                <h2><i data-lucide="settings" class="lucide-icon icon-20"></i> Configuration</h2>
-                <button onclick="openConfigModal()" class="btn btn-ghost">Modify Config</button>
+                <h2><i data-lucide="settings" class="lucide-icon icon-20"></i> Server Settings</h2>
+                <button onclick="openConfigModal()" class="btn btn-ghost">Modify Settings</button>
             </div>
             <div class="panel-body">
                 <div class="config-row">
@@ -61,34 +66,21 @@
                     <span class="value" id="confPort">-</span>
                 </div>
                 <div class="config-row">
-                    <span class="label">Password:</span>
-                    <span class="value" id="confPassword">-</span>
-                </div>
-                <div class="config-row">
                     <span class="label">Obfuscation (Salamander):</span>
                     <span class="value" id="confObfs">-</span>
                 </div>
             </div>
         </div>
 
+        <!-- Users Management Panel -->
         <div class="panel">
             <div class="panel-header">
-                <h2><i data-lucide="link" class="lucide-icon icon-20"></i> Client Links</h2>
+                <h2><i data-lucide="users" class="lucide-icon icon-20"></i> User Management</h2>
+                <button onclick="openAddUserModal()" class="btn btn-primary"><i data-lucide="user-plus" class="lucide-icon icon-16"></i> Add User</button>
             </div>
             <div class="panel-body">
-                <div class="link-box">
-                    <h3>NekoBox / NekoRay URL</h3>
-                    <div class="input-copy-group">
-                        <input type="text" id="nekoboxUrl" readonly class="form-control">
-                        <button onclick="copyToClipboard('nekoboxUrl')" class="btn btn-primary"><i data-lucide="copy" class="lucide-icon icon-16"></i></button>
-                    </div>
-                </div>
-                <div class="link-box" style="margin-top: 16px;">
-                    <h3>v2rayN Client Config</h3>
-                    <div class="input-copy-group">
-                        <textarea id="v2rayNConfig" readonly class="form-control" rows="8" style="resize: none; font-family: monospace;"></textarea>
-                        <button onclick="copyToClipboard('v2rayNConfig')" class="btn btn-primary" style="height: auto;"><i data-lucide="copy" class="lucide-icon icon-16"></i></button>
-                    </div>
+                <div id="usersGrid" class="users-grid">
+                    <!-- User cards will be dynamically rendered here -->
                 </div>
             </div>
         </div>
@@ -101,21 +93,17 @@
 
 </main>
 
-<!-- Modify Config Modal -->
+<!-- Modify Server Config Modal -->
 <div id="configModal" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
-            <h2 class="modal-title">Modify Configuration</h2>
+            <h2 class="modal-title">Modify Server Settings</h2>
             <button class="modal-close" onclick="closeConfigModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
         </div>
         <form id="configForm" onsubmit="saveConfig(event)">
             <div class="form-group">
                 <label>Port</label>
                 <input type="number" id="editPort" required class="form-control">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="text" id="editPassword" required class="form-control">
             </div>
             <div class="checkbox-row" style="margin-top: 15px;">
                 <input type="checkbox" id="editObfsEnabled" onchange="toggleObfsPassword()">
@@ -129,6 +117,78 @@
         <div class="modal-footer">
             <button type="button" onclick="closeConfigModal()" class="btn btn-ghost">Cancel</button>
             <button type="submit" form="configForm" class="btn btn-primary">Save & Restart</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Add New User</h2>
+            <button class="modal-close" onclick="closeAddUserModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
+        </div>
+        <form id="addUserForm" onsubmit="saveAddUser(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="addUsername" required class="form-control" placeholder="e.g. user1">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <div class="input-copy-group">
+                    <input type="text" id="addPassword" required class="form-control" placeholder="Password">
+                    <button type="button" onclick="generateRandomAddPassword()" class="btn btn-ghost" title="Generate Random"><i data-lucide="shuffle" class="lucide-icon icon-16"></i></button>
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="button" onclick="closeAddUserModal()" class="btn btn-ghost">Cancel</button>
+            <button type="submit" form="addUserForm" class="btn btn-primary">Create User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Password Modal -->
+<div id="editUserModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title">Edit User Password</h2>
+            <button class="modal-close" onclick="closeEditUserModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
+        </div>
+        <form id="editUserForm" onsubmit="saveEditUser(event)">
+            <input type="hidden" id="editTargetUsername">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="editDisplayUsername" readonly class="form-control" style="opacity: 0.7;">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <div class="input-copy-group">
+                    <input type="text" id="editUserPassword" required class="form-control" placeholder="New password">
+                    <button type="button" onclick="generateRandomEditPassword()" class="btn btn-ghost" title="Generate Random"><i data-lucide="shuffle" class="lucide-icon icon-16"></i></button>
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button type="button" onclick="closeEditUserModal()" class="btn btn-ghost">Cancel</button>
+            <button type="submit" form="editUserForm" class="btn btn-primary">Update Password</button>
+        </div>
+    </div>
+</div>
+
+<!-- Raw v2rayN Config Modal -->
+<div id="v2rayModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2 class="modal-title">v2rayN Client Config (<span id="v2rayUsernameDisplay"></span>)</h2>
+            <button class="modal-close" onclick="closeV2rayModal()"><i data-lucide="x" class="lucide-icon icon-20"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 15px 0;">
+            <textarea id="v2rayTextarea" readonly class="form-control" rows="10" style="resize: none; font-family: monospace;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="copyV2rayConfigFromModal()" class="btn btn-primary"><i data-lucide="copy" class="lucide-icon icon-16"></i> Copy Config</button>
+            <button type="button" onclick="closeV2rayModal()" class="btn btn-ghost">Close</button>
         </div>
     </div>
 </div>
